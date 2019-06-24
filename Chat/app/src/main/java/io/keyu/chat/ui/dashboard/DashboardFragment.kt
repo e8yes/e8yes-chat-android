@@ -2,8 +2,6 @@ package io.keyu.chat.ui.dashboard
 
 import android.os.AsyncTask
 import android.os.Bundle
-import android.text.TextUtils
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,6 +16,7 @@ import io.grpc.ManagedChannelBuilder
 import io.keyu.chat.Empty
 import io.keyu.chat.R
 import io.keyu.chat.SystemServiceGrpc
+import io.keyu.chat.constant.Constants
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.ref.WeakReference
@@ -35,19 +34,15 @@ class DashboardFragment : Fragment() {
         dashboardViewModel =
             ViewModelProviders.of(this).get(DashboardViewModel::class.java)
         val root = inflater.inflate(R.layout.fragment_dashboard, container, false)
-        val textView: TextView = root.findViewById(R.id.dashboardText)
-        val s: Button = root.findViewById(R.id.getVersionButton)
+        val textView: TextView = root.findViewById(R.id.dashboard_text)
+        val versionButton: Button = root.findViewById(R.id.version_button)
         dashboardViewModel.text.observe(this, Observer {
             textView.text = it
         })
 
-        s.setOnClickListener {
+        versionButton.setOnClickListener {
             GrpcTask(activity)
-                .execute(
-                    "10.0.2.2",
-                    "haha",
-                    "50051"
-                )
+                .execute()
         }
 
         return root
@@ -60,15 +55,11 @@ class DashboardFragment : Fragment() {
         private var channel: ManagedChannel? = null
 
         override fun doInBackground(vararg params: String): String {
-            val host = params[0]
-            val portStr = params[2]
-            val port = if (TextUtils.isEmpty(portStr)) 0 else Integer.valueOf(portStr)
             return try {
-                channel = ManagedChannelBuilder.forAddress("10.0.2.2", 50051).usePlaintext().build()
+                channel = ManagedChannelBuilder.forAddress(Constants.host, Constants.port).usePlaintext().build()
                 val stub = SystemServiceGrpc.newBlockingStub(channel)
                 val request = Empty.newBuilder().build()
                 val reply = stub.version(request)
-                Log.v("hehe", reply.version)
                 reply.version
             } catch (e: Exception) {
                 val sw = StringWriter()
@@ -76,9 +67,7 @@ class DashboardFragment : Fragment() {
                 e.printStackTrace(pw)
                 pw.flush()
 
-                Log.e("hehe", "Failed to fetch version : %s".format(sw))
-
-                "Failed to fetch version : %s".format(sw)
+                "Failed to fetch version number. %s".format(sw)
             }
         }
 
@@ -90,7 +79,7 @@ class DashboardFragment : Fragment() {
             }
 
             val activity = activityReference.get() ?: return
-            val dashboardText: TextView = activity.findViewById(R.id.dashboardText)
+            val dashboardText: TextView = activity.findViewById(R.id.dashboard_text)
 
             dashboardText.text = result
         }
